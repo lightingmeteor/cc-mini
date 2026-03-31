@@ -90,3 +90,53 @@ def test_grep_case_insensitive(tmp_path):
 
 def test_grep_is_read_only():
     assert GrepTool().is_read_only() is True
+
+
+from mini_claude.tools.file_edit import FileEditTool
+
+
+def test_file_edit_replaces_unique_string(tmp_path):
+    f = tmp_path / "code.py"
+    f.write_text("def hello():\n    pass\n")
+
+    result = FileEditTool().execute(
+        file_path=str(f),
+        old_string="    pass",
+        new_string='    return "hi"',
+    )
+    assert not result.is_error
+    assert 'return "hi"' in f.read_text()
+
+
+def test_file_edit_fails_on_duplicate_string(tmp_path):
+    f = tmp_path / "code.py"
+    f.write_text("pass\npass\n")
+
+    result = FileEditTool().execute(file_path=str(f), old_string="pass", new_string="x")
+    assert result.is_error
+    assert "2" in result.content  # mentions count
+
+
+def test_file_edit_replace_all(tmp_path):
+    f = tmp_path / "code.py"
+    f.write_text("x = 1\nx = 2\n")
+
+    result = FileEditTool().execute(file_path=str(f), old_string="x", new_string="y", replace_all=True)
+    assert not result.is_error
+    assert "y = 1" in f.read_text()
+    assert "y = 2" in f.read_text()
+
+
+def test_file_edit_missing_file():
+    result = FileEditTool().execute(
+        file_path="/no/such/file.py", old_string="x", new_string="y"
+    )
+    assert result.is_error
+
+
+def test_file_edit_string_not_found(tmp_path):
+    f = tmp_path / "code.py"
+    f.write_text("hello\n")
+    result = FileEditTool().execute(file_path=str(f), old_string="xyz", new_string="abc")
+    assert result.is_error
+    assert "not found" in result.content.lower()
