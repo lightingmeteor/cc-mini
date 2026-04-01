@@ -416,7 +416,7 @@ def main() -> None:
     # Interactive REPL
     config_note = f"[dim]{app_config.model} · max_tokens={app_config.max_tokens}[/dim]"
     session_note = f"[dim]session {session_store.session_id[:8]}[/dim]" if session_store else ""
-    console.print("[bold cyan]Mini Claude Code[/bold cyan]  "
+    console.print("[bold cyan]cc-mini[/bold cyan]  "
                   f"{config_note}  {session_note}  "
                   "[dim]Esc or Ctrl+C to cancel, Ctrl+C twice to exit[/dim]")
     console.print('[dim]Enter to send, Alt+Enter for newline, /help for commands[/dim]\n')
