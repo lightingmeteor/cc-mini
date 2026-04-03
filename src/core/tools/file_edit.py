@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from .base import Tool, ToolResult
 
@@ -19,6 +21,10 @@ class FileEditTool(Tool):
         },
         "required": ["file_path", "old_string", "new_string"],
     }
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        file_path = kwargs.get("file_path", "")
+        return f"Editing {file_path}" if file_path else None
 
     def execute(self, file_path: str, old_string: str, new_string: str,
                 replace_all: bool = False) -> ToolResult:

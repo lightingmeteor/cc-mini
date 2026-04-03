@@ -28,6 +28,10 @@ class AgentTool(Tool):
         "required": ["description", "prompt"],
     }
 
+    def get_activity_description(self, **kwargs) -> str | None:
+        desc = kwargs.get("description", "")
+        return f"Running agent: {desc}" if desc else "Running agent…"
+
     def __init__(self, manager: WorkerManager):
         self._manager = manager
 

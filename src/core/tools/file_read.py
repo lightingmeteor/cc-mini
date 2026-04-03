@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from .base import Tool, ToolResult
 
@@ -21,6 +23,10 @@ class FileReadTool(Tool):
 
     def is_read_only(self) -> bool:
         return True
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        file_path = kwargs.get("file_path", "")
+        return f"Reading {file_path}" if file_path else None
 
     def execute(self, file_path: str, offset: int = 0, limit: int = 2000) -> ToolResult:
         path = Path(file_path)

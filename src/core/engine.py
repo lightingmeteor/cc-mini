@@ -236,7 +236,8 @@ class Engine:
 
         Yields:
           ("text", str)                         — streamed text chunk
-          ("tool_call", name, input)            — before each tool executes
+          ("tool_call", name, input, activity)  — before each tool executes
+          ("tool_executing", name, input, activity) — after permission granted, tool running
           ("tool_result", name, input, result)  — after each tool executes
           ("waiting",)                          — text done, waiting for tool_use
           ("error", str)                        — non-fatal API error shown to user
@@ -345,9 +346,20 @@ class Engine:
                 for tool_use in tool_uses:
                     if self._aborted:
                         raise AbortedError()
-                    yield ("tool_call", _block_name(tool_use), _block_input(tool_use))
-                    result = self._execute_tool(tool_use)
-                    yield ("tool_result", _block_name(tool_use), _block_input(tool_use), result)
+                    tool_name = _block_name(tool_use)
+                    tool_input = _block_input(tool_use)
+                    tool = self._tools.get(tool_name)
+                    activity = tool.get_activity_description(**tool_input) if tool else None
+                    yield ("tool_call", tool_name, tool_input, activity)
+
+                    # Check permission before starting spinner
+                    if tool and self._permissions.check(tool, tool_input) == "deny":
+                        result = ToolResult(content="Permission denied.", is_error=True)
+                    else:
+                        yield ("tool_executing", tool_name, tool_input, activity)
+                        result = self._execute_tool(tool_use, skip_permission=True)
+
+                    yield ("tool_result", tool_name, tool_input, result)
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": _block_id(tool_use),
@@ -364,14 +376,14 @@ class Engine:
             self.cancel_turn()
             raise
 
-    def _execute_tool(self, tool_use) -> ToolResult:
+    def _execute_tool(self, tool_use, skip_permission: bool = False) -> ToolResult:
         tool_name = _block_name(tool_use)
         tool_input = _block_input(tool_use)
         tool = self._tools.get(tool_name)
         if tool is None:
             return ToolResult(content=f"Unknown tool: {tool_name}", is_error=True)
 
-        if self._permissions.check(tool, tool_input) == "deny":
+        if not skip_permission and self._permissions.check(tool, tool_input) == "deny":
             return ToolResult(content="Permission denied.", is_error=True)
 
         try:

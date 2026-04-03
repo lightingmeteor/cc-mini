@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import subprocess
 from pathlib import Path
@@ -28,6 +30,10 @@ class GrepTool(Tool):
         },
         "required": ["pattern"],
     }
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        pattern = kwargs.get("pattern", "")
+        return f"Searching for {pattern}" if pattern else None
 
     def is_read_only(self) -> bool:
         return True

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from .base import Tool, ToolResult
 
@@ -17,6 +19,10 @@ class FileWriteTool(Tool):
         },
         "required": ["file_path", "content"],
     }
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        file_path = kwargs.get("file_path", "")
+        return f"Writing {file_path}" if file_path else None
 
     def execute(self, file_path: str, content: str) -> ToolResult:
         path = Path(file_path)

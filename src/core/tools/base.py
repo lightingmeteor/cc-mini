@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -23,6 +25,10 @@ class Tool(ABC):
 
     @abstractmethod
     def execute(self, **kwargs) -> ToolResult: ...
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        """Return a human-readable description of what the tool is doing, shown in the spinner."""
+        return None
 
     def is_read_only(self) -> bool:
         return False

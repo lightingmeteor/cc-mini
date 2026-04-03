@@ -437,11 +437,18 @@ def run_query(engine: Engine, user_input: str | list, print_mode: bool,
                     spinner.stop()
                     streaming = False
                     listener.pause()
-                    _, tool_name, tool_input = event
+                    _, tool_name, tool_input, activity = event
                     preview = _tool_preview(tool_name, tool_input)
                     console.print(f"\n[dim]↳ {tool_name}({preview}) …[/dim]")
 
+                elif event[0] == "tool_executing":
+                    # Permission granted — start spinner during actual execution
+                    _, tool_name, tool_input, activity = event
+                    activity_text = activity or f"Running {tool_name}…"
+                    spinner.start(activity_text)
+
                 elif event[0] == "tool_result":
+                    spinner.stop()
                     _, tool_name, tool_input, result = event
                     status = "[red]✗[/red]" if result.is_error else "[green]✓[/green]"
                     console.print(f"[dim]  {status} done[/dim]")

@@ -30,6 +30,12 @@ class BashTool(Tool):
         "required": ["command"],
     }
 
+    def get_activity_description(self, **kwargs) -> str | None:
+        command = kwargs.get("command", "")
+        # Show a truncated version of the command
+        preview = command[:60] + "…" if len(command) > 60 else command
+        return f"Running {preview}" if command else None
+
     def __init__(self, sandbox_manager: SandboxManager | None = None):
         self._sandbox = sandbox_manager
 

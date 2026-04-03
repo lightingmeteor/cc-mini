@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import glob as glob_module
 from pathlib import Path
 from .base import Tool, ToolResult
@@ -17,6 +19,10 @@ class GlobTool(Tool):
 
     def is_read_only(self) -> bool:
         return True
+
+    def get_activity_description(self, **kwargs) -> str | None:
+        pattern = kwargs.get("pattern", "")
+        return f"Finding {pattern}" if pattern else None
 
     def execute(self, pattern: str, path: str = ".") -> ToolResult:
         base = Path(path).resolve()
