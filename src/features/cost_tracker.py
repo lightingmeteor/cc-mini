@@ -82,6 +82,9 @@ class ModelUsage:
     output_tokens: int = 0
     cache_read_input_tokens: int = 0
     cache_creation_input_tokens: int = 0
+    advisor_input_tokens: int = 0
+    advisor_output_tokens: int = 0
+    advisor_cost_usd: float = 0.0
     cost_usd: float = 0.0
     api_duration_s: float = 0.0
     pricing_known: bool = True
@@ -162,10 +165,24 @@ class CostTracker:
         ) / 1_000_000
         return cost
 
-    def add_usage(self, model: str, usage: dict, api_duration_s: float = 0.0) -> float:
+    def add_usage(self, model: str, usage: dict, api_duration_s: float = 0.0,
+                  advisor_model: str | None = None) -> float:
         """Record token counts and return cost for this call."""
         cost = self.calculate_cost(model, usage)
-        self._total_cost_usd += cost
+
+        # Calculate advisor cost separately (advisor tokens billed at advisor model's rate)
+        advisor_cost = 0.0
+        advisor_in = usage.get("advisor_input_tokens", 0)
+        advisor_out = usage.get("advisor_output_tokens", 0)
+        if (advisor_in or advisor_out) and advisor_model:
+            advisor_tier = _tier_for_model(advisor_model)
+            if advisor_tier:
+                advisor_cost = (
+                    advisor_in * advisor_tier.input
+                    + advisor_out * advisor_tier.output
+                ) / 1_000_000
+
+        self._total_cost_usd += cost + advisor_cost
         self._total_api_duration_s += api_duration_s
         self._last_input_tokens = usage.get("input_tokens", 0)
 
@@ -174,11 +191,14 @@ class CostTracker:
         mu.output_tokens += usage.get("output_tokens", 0)
         mu.cache_read_input_tokens += usage.get("cache_read_input_tokens", 0)
         mu.cache_creation_input_tokens += usage.get("cache_creation_input_tokens", 0)
-        mu.cost_usd += cost
+        mu.advisor_input_tokens += advisor_in
+        mu.advisor_output_tokens += advisor_out
+        mu.advisor_cost_usd += advisor_cost
+        mu.cost_usd += cost + advisor_cost
         mu.api_duration_s += api_duration_s
         if not _is_known_model(model):
             mu.pricing_known = False
-        return cost
+        return cost + advisor_cost
 
     def add_lines_changed(self, added: int, removed: int) -> None:
         """Record code changes (lines added/removed) from Edit/Write tools."""
@@ -218,6 +238,8 @@ class CostTracker:
                 parts.append(f"{_fmt_tokens(mu.cache_read_input_tokens)} cache read")
             if mu.cache_creation_input_tokens:
                 parts.append(f"{_fmt_tokens(mu.cache_creation_input_tokens)} cache write")
+            if mu.advisor_input_tokens or mu.advisor_output_tokens:
+                parts.append(f"advisor: {_fmt_tokens(mu.advisor_input_tokens)} in / {_fmt_tokens(mu.advisor_output_tokens)} out (${mu.advisor_cost_usd:.4f})")
             detail = ", ".join(parts)
             if not mu.pricing_known:
                 detail += ", pricing unavailable"

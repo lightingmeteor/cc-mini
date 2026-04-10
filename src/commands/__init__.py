@@ -450,6 +450,20 @@ def _cmd_plan(ctx: CommandContext, args: str) -> None:
             ctx.pending_query = description
 
 
+def _cmd_advisor(ctx: CommandContext, args: str) -> None:
+    """Toggle advisor mode (consult a stronger model during inference)."""
+    engine = ctx.engine
+    if engine._provider != "anthropic":
+        ctx.console.print("[red]Advisor is only available with Anthropic provider[/red]")
+        return
+    enabled = engine.toggle_advisor()
+    status = "enabled" if enabled else "disabled"
+    ctx.console.print(
+        f"[green]Advisor {status}[/green]"
+        f"  (model: {engine._advisor_model}, max_uses: {engine._advisor_max_uses})"
+    )
+
+
 # (name, description, handler)
 _COMMAND_TABLE: list[tuple[str, str, object]] = [
     ("help",     "Show available commands",                         _cmd_help),
@@ -464,6 +478,7 @@ _COMMAND_TABLE: list[tuple[str, str, object]] = [
     ("cost",    "Show token usage and cost summary",               _cmd_cost),
     ("model",   "Show or switch model [model-name]",               _cmd_model),
     ("plan",    "Enter plan mode or show current plan",             _cmd_plan),
+    ("advisor", "Toggle advisor mode (consult a stronger model)",  _cmd_advisor),
 ]
 
 _HANDLERS: dict[str, object] = {name: handler for name, _, handler in _COMMAND_TABLE}

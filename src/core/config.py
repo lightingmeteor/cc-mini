@@ -72,6 +72,8 @@ _ENV_MEMORY_DIR = "CC_MINI_MEMORY_DIR"
 _ENV_PROVIDER = "CC_MINI_PROVIDER"
 _ENV_EFFORT = "CC_MINI_EFFORT"
 _ENV_BUDDY_MODEL = "CC_MINI_BUDDY_MODEL"
+_ENV_ADVISOR_MODEL = "CC_MINI_ADVISOR_MODEL"
+_ENV_ADVISOR_MAX_USES = "CC_MINI_ADVISOR_MAX_USES"
 _DEFAULT_CONFIG_PATHS = (
     Path.home() / ".config" / "cc-mini" / "config.toml",
     Path.cwd() / ".cc-mini.toml",
@@ -91,6 +93,8 @@ class AppConfig:
     dream_interval_hours: float = 24.0
     dream_min_sessions: int = 5
     auto_dream: bool = True
+    advisor_model: str = "claude-opus-4-6"
+    advisor_max_uses: int = 3
     config_paths: tuple[Path, ...] = ()
 
 
@@ -197,6 +201,20 @@ def load_app_config(args: Namespace) -> AppConfig:
     if getattr(args, "no_auto_dream", False):
         auto_dream = False
 
+    raw_advisor_model = (
+        getattr(args, "advisor_model", None)
+        or env_values.get("advisor_model")
+        or _file_value("advisor_model")
+    )
+    advisor_model = resolve_model(raw_advisor_model, provider=provider) if raw_advisor_model else "claude-opus-4-6"
+
+    raw_advisor_max_uses = (
+        getattr(args, "advisor_max_uses", None)
+        or env_values.get("advisor_max_uses")
+        or _file_value("advisor_max_uses")
+    )
+    advisor_max_uses = int(raw_advisor_max_uses) if raw_advisor_max_uses is not None else 3
+
     return AppConfig(
         provider=provider,
         api_key=args.api_key or selected_env_values.get("api_key") or _file_value("api_key"),
@@ -209,6 +227,8 @@ def load_app_config(args: Namespace) -> AppConfig:
         dream_interval_hours=dream_interval,
         dream_min_sessions=dream_min_sessions,
         auto_dream=auto_dream,
+        advisor_model=advisor_model,
+        advisor_max_uses=advisor_max_uses,
         config_paths=config_paths,
     )
 
@@ -268,6 +288,8 @@ def _read_config_file(path: Path) -> dict[str, Any]:
         "dream_interval_hours",
         "dream_min_sessions",
         "auto_dream",
+        "advisor_model",
+        "advisor_max_uses",
     ):
         if key in data:
             values["top"][key] = data[key]
@@ -297,6 +319,10 @@ def _load_env_values() -> dict[str, Any]:
         values["effort"] = os.environ[_ENV_EFFORT]
     if os.getenv(_ENV_BUDDY_MODEL):
         values["buddy_model"] = os.environ[_ENV_BUDDY_MODEL]
+    if os.getenv(_ENV_ADVISOR_MODEL):
+        values["advisor_model"] = os.environ[_ENV_ADVISOR_MODEL]
+    if os.getenv(_ENV_ADVISOR_MAX_USES):
+        values["advisor_max_uses"] = os.environ[_ENV_ADVISOR_MAX_USES]
     return values
 
 

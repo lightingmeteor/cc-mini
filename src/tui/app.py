@@ -277,6 +277,8 @@ def main() -> None:
         effort=app_config.effort,
         session_store=session_store,
         cost_tracker=cost_tracker,
+        advisor_model=app_config.advisor_model,
+        advisor_max_uses=app_config.advisor_max_uses,
     )
     plan_manager.bind_engine(engine, build_plan_worker_engine=_build_plan_worker_engine)
     plan_manager.set_permissions(permissions)

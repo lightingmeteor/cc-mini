@@ -62,7 +62,9 @@ class Engine:
                  base_url: str | None = None,
                  effort: str | None = None,
                  session_store: SessionStore | None = None,
-                 cost_tracker: CostTracker | None = None):
+                 cost_tracker: CostTracker | None = None,
+                 advisor_model: str | None = None,
+                 advisor_max_uses: int | None = None):
         self._provider = provider
         self._model = resolve_model(model, provider=provider)
         self._max_tokens = max_tokens or default_max_tokens_for_model(
@@ -84,6 +86,20 @@ class Engine:
         self._active_stream = None  # reference to current HTTP stream
         self._session_store = session_store
         self._cost_tracker = cost_tracker
+        self._advisor_model = advisor_model or "claude-opus-4-6"
+        self._advisor_max_uses = advisor_max_uses if advisor_max_uses is not None else 3
+        self._advisor_enabled = False
+
+    # -- advisor toggle --------------------------------------------------------
+
+    def toggle_advisor(self) -> bool:
+        """Toggle advisor on/off. Returns new state."""
+        self._advisor_enabled = not self._advisor_enabled
+        return self._advisor_enabled
+
+    @property
+    def advisor_enabled(self) -> bool:
+        return self._advisor_enabled
 
     # -- message accessors (for compact / resume / commands) ----------------
 
@@ -210,11 +226,19 @@ class Engine:
                 for attempt in range(_MAX_RETRIES):
                     try:
                         _api_t0 = time.monotonic()
+                        tools = [t.to_api_schema() for t in self._tools.values()]
+                        if self._advisor_enabled:
+                            tools.append({
+                                "type": "advisor_20260301",
+                                "name": "advisor",
+                                "model": self._advisor_model,
+                                "max_uses": self._advisor_max_uses,
+                            })
                         stream_obj = self._client.stream_messages(
                             model=self._model,
                             max_tokens=self._max_tokens,
                             system=self._system_prompt,
-                            tools=[t.to_api_schema() for t in self._tools.values()],
+                            tools=tools,
                             messages=self._messages,
                             effort=self._effort,
                         )
@@ -242,7 +266,9 @@ class Engine:
                                     "output_tokens": getattr(final.usage, "output_tokens", 0) or 0,
                                     "cache_read_input_tokens": getattr(final.usage, "cache_read_input_tokens", 0) or 0,
                                     "cache_creation_input_tokens": getattr(final.usage, "cache_creation_input_tokens", 0) or 0,
-                                }, api_duration_s=_api_elapsed)
+                                    "advisor_input_tokens": getattr(final.usage, "advisor_input_tokens", 0) or 0,
+                                    "advisor_output_tokens": getattr(final.usage, "advisor_output_tokens", 0) or 0,
+                                }, api_duration_s=_api_elapsed, advisor_model=self._advisor_model if self._advisor_enabled else None)
                                 yield ("usage", final.usage)
                             for block in final.content:
                                 if _block_type(block) == "tool_use":

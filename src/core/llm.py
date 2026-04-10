@@ -63,6 +63,8 @@ class LLMUsage:
     output_tokens: int = 0
     cache_read_input_tokens: int = 0
     cache_creation_input_tokens: int = 0
+    advisor_input_tokens: int = 0
+    advisor_output_tokens: int = 0
 
 
 @dataclass
@@ -503,6 +505,8 @@ def _usage_from_anthropic(usage: Any) -> LLMUsage | None:
         output_tokens=int(_value(usage, "output_tokens", 0) or 0),
         cache_read_input_tokens=int(_value(usage, "cache_read_input_tokens", 0) or 0),
         cache_creation_input_tokens=int(_value(usage, "cache_creation_input_tokens", 0) or 0),
+        advisor_input_tokens=int(_value(usage, "advisor_input_tokens", 0) or 0),
+        advisor_output_tokens=int(_value(usage, "advisor_output_tokens", 0) or 0),
     )
 
 
