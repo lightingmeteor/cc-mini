@@ -2,6 +2,8 @@ from core.llm import (
     _to_openai_messages,
     _tool_schema_to_openai,
     default_companion_model,
+    get_context_window_for_model,
+    get_max_output_tokens_upper,
     supports_reasoning_effort,
 )
 
@@ -86,3 +88,11 @@ def test_openai_reasoning_effort_support():
 
 def test_default_companion_model_uses_main_model_for_openai():
     assert default_companion_model("openai", "gpt-4.1-mini") == "gpt-4.1-mini"
+
+
+def test_openai_model_limits_cover_gpt5_family_aliases():
+    assert get_context_window_for_model("gpt-5.2-codex") == 400_000
+    assert get_context_window_for_model("gpt5.4") == 400_000
+    assert get_context_window_for_model("gpt-4.1") == 1_047_576
+    assert get_max_output_tokens_upper("gpt-5.2-codex") == 128_000
+    assert get_max_output_tokens_upper("gpt5.4") == 128_000

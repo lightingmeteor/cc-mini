@@ -44,11 +44,17 @@ def test_default_max_tokens_follow_model_family():
     assert default_max_tokens_for_model("claude-opus-4-6") == 64000
     assert default_max_tokens_for_model("claude-opus-4-1-20250805") == 32000
     assert default_max_tokens_for_model("claude-3-5-haiku-20241022") == 8192
+    assert default_max_tokens_for_model("gpt-5.2-codex", provider="openai") == 128000
+    assert default_max_tokens_for_model("gpt5.4", provider="openai") == 128000
+    assert default_max_tokens_for_model("gpt-4.1", provider="openai") == 32768
 
 
 def test_load_app_config_reads_anthropic_section(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("CC_MINI_PROVIDER", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("CC_MINI_MODEL", raising=False)
     monkeypatch.delenv("CC_MINI_MAX_TOKENS", raising=False)
 
@@ -101,8 +107,11 @@ def test_load_app_config_cli_overrides_env_and_file(tmp_path: Path, monkeypatch:
 
 
 def test_load_app_config_uses_defaults_when_nothing_is_set(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("CC_MINI_PROVIDER", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("CC_MINI_MODEL", raising=False)
     monkeypatch.delenv("CC_MINI_MAX_TOKENS", raising=False)
 
@@ -127,6 +136,8 @@ def test_load_app_config_reads_openai_section(tmp_path: Path, monkeypatch: pytes
     monkeypatch.delenv("CC_MINI_PROVIDER", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("CC_MINI_MODEL", raising=False)
+    monkeypatch.delenv("CC_MINI_MAX_TOKENS", raising=False)
 
     config_path = tmp_path / "cc-mini.toml"
     config_path.write_text(
@@ -166,3 +177,13 @@ def test_openai_env_wins_when_provider_is_openai(monkeypatch: pytest.MonkeyPatch
     assert config.base_url == "https://openai.env"
     assert config.model == "gpt-4.1"
     assert config.buddy_model == "gpt-4.1-mini"
+
+
+def test_openai_defaults_follow_gpt5_family(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("CC_MINI_PROVIDER", "openai")
+    monkeypatch.setenv("CC_MINI_MODEL", "gpt5.4")
+    monkeypatch.delenv("CC_MINI_MAX_TOKENS", raising=False)
+
+    config = load_app_config(_args())
+
+    assert config.max_tokens == 128000

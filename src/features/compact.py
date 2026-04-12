@@ -6,7 +6,7 @@ Modelled after claude-code's ``src/services/compact/compact.ts``.
 from __future__ import annotations
 
 from typing import Any
-from core.llm import LLMClient
+from core.llm import LLMClient, get_context_window_for_model
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -19,29 +19,8 @@ MIN_RECENT_TOKENS = 10_000          # keep at least this many tokens of recent c
 COMPACT_MAX_OUTPUT_TOKENS = 4096
 AUTOCOMPACT_BUFFER_TOKENS = 13_000  # matches official autoCompact.ts
 
-# Model context windows (tokens).  First match wins.
-_CONTEXT_WINDOWS: list[tuple[str, int]] = [
-    ("claude-opus-4-6", 1_000_000),
-    ("claude-opus-4-5", 1_000_000),
-    ("claude-opus-4",   200_000),
-    ("claude-sonnet-4-6", 1_000_000),
-    ("claude-sonnet-4-5", 1_000_000),
-    ("claude-sonnet-4", 200_000),
-    ("claude-sonnet",   200_000),
-    ("claude-3-7-sonnet", 200_000),
-    ("claude-3-5-sonnet", 200_000),
-    ("claude-haiku-4-5", 200_000),
-    ("claude-3-5-haiku", 200_000),
-]
-_DEFAULT_CONTEXT_WINDOW = 200_000
-
-
 def _context_window_for_model(model: str) -> int:
-    model_lower = model.lower()
-    for prefix, window in _CONTEXT_WINDOWS:
-        if prefix in model_lower:
-            return window
-    return _DEFAULT_CONTEXT_WINDOW
+    return get_context_window_for_model(model)
 
 
 def _auto_compact_threshold(model: str) -> int:

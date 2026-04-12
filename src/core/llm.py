@@ -27,32 +27,53 @@ _VALID_PROVIDERS = {_ANTHROPIC_PROVIDER, _OPENAI_PROVIDER}
 
 MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
 
+def _normalize_model_key(model: str) -> str:
+    return model.strip().lower().replace("-", "").replace("_", "").replace(".", "")
+
+
+def _model_matches_family(model: str, family: str) -> bool:
+    lowered = model.strip().lower()
+    if lowered.startswith(family):
+        return True
+    return _normalize_model_key(lowered).startswith(_normalize_model_key(family))
+
+
 def get_context_window_for_model(model: str) -> int:
     """Return the context window size for a given model."""
     lowered = model.lower()
+    if _model_matches_family(model, "gpt-4.1"):
+        return 1_047_576
+    if _model_matches_family(model, "gpt-5-chat"):
+        return 128_000
+    if _model_matches_family(model, "gpt-5"):
+        return 400_000
     if "[1m]" in lowered or "1m" in lowered.split("-"):
         return 1_000_000
     return MODEL_CONTEXT_WINDOW_DEFAULT
 
 
 # Upper limit for max output tokens — used for auto-escalation scenarios.
-_MODEL_MAX_OUTPUT_UPPER: dict[str, int] = {
-    "claude-opus-4-6": 64000,
-    "claude-sonnet-4-6": 64000,
-    "claude-opus-4-5": 64000,
-    "claude-sonnet-4-5": 64000,
-    "claude-sonnet-4": 64000,
-    "claude-opus-4-1": 64000,
-    "claude-opus-4": 64000,
-    "claude-3-7-sonnet": 64000,
-    "claude-3-5-sonnet": 8192,
-    "claude-3-5-haiku": 8192,
-}
+_MODEL_MAX_OUTPUT_UPPER: tuple[tuple[str, int], ...] = (
+    ("gpt-5-chat", 16_384),
+    ("gpt-5", 128_000),
+    ("gpt-4.1", 32_768),
+    ("gpt-4o", 16_384),
+    ("claude-opus-4-6", 64_000),
+    ("claude-sonnet-4-6", 64_000),
+    ("claude-opus-4-5", 64_000),
+    ("claude-sonnet-4-5", 64_000),
+    ("claude-sonnet-4", 64_000),
+    ("claude-opus-4-1", 64_000),
+    ("claude-opus-4", 64_000),
+    ("claude-3-7-sonnet", 64_000),
+    ("claude-3-5-sonnet", 8_192),
+    ("claude-3-5-haiku", 8_192),
+)
 
 def get_max_output_tokens_upper(model: str) -> int | None:
     """Return the upper limit of output tokens for a model, if known."""
-    for prefix, limit in _MODEL_MAX_OUTPUT_UPPER.items():
-        if model.startswith(prefix):
+    for prefix, limit in _MODEL_MAX_OUTPUT_UPPER:
+        if _model_matches_family(model, prefix):
             return limit
     return None
 
@@ -97,7 +118,7 @@ def default_companion_model(provider: str, model: str) -> str:
 def default_max_tokens_for_provider(provider: str) -> int:
     provider = validate_provider(provider)
     if provider == _OPENAI_PROVIDER:
-        return 8192
+        return 128000
     return 32000
 
 

@@ -20,6 +20,7 @@ from .llm import (
     default_companion_model,
     default_max_tokens_for_provider,
     default_model_for_provider,
+    _model_matches_family,
     validate_provider,
 )
 
@@ -115,16 +116,17 @@ def default_max_tokens_for_model(
     provider = validate_provider(provider)
     resolved = resolve_model(model, provider=provider)
     if provider == "openai":
-        openai_limits = (
-            ("gpt-5", 8192),
-            ("gpt-4.1", 16384),
-            ("gpt-4o", 16384),
-            ("o1", 32768),
-            ("o3", 32768),
-            ("o4", 32768),
+        openai_limits: tuple[tuple[str, int], ...] = (
+            ("gpt-5-chat", 16_384),
+            ("gpt-5", 128_000),
+            ("gpt-4.1", 32_768),
+            ("gpt-4o", 16_384),
+            ("o1", 32_768),
+            ("o3", 32_768),
+            ("o4", 32_768),
         )
         for prefix, limit in openai_limits:
-            if resolved.startswith(prefix):
+            if _model_matches_family(resolved, prefix):
                 return limit
         return _OPENAI_FALLBACK_MAX_TOKENS
 
